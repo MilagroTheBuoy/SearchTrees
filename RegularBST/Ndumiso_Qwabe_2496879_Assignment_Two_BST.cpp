@@ -22,6 +22,7 @@ class Tree{
     public:
         Tree();
         Tree(Node* newRoot);
+        Tree(std::vector<int> &vec);
         ~Tree();
         Node* root = nullptr;
         Node* treeMin(Node* root);
@@ -30,13 +31,13 @@ class Tree{
         Node* successor(Node* node);
         int getTreeHeight(Node* node);
         void treeInsert(int key);
-        void treeDelete(Node* newValue);
+        void treeDelete(Node* targetNode);
         void preorderTraversal(Node* node);
         void inorderTraversal(Node* node);
         void postorderTraversal(Node* node);
 
     private:
-        void transplant(Node* u, Node* v);
+        void transplant(Node* nodeToReplace, Node* replacementNode);
 };
 
 Node::Node(int newKey){
@@ -49,6 +50,12 @@ Tree::Tree(){}
 
 Tree::Tree(Node* newRoot){
     root = newRoot;
+}
+
+Tree::Tree(std::vector<int> &vec){
+    for(int number: vec){
+        treeInsert(number);
+    }
 }
 
 Tree::~Tree(){
@@ -73,7 +80,7 @@ Node* Tree::treeMax(Node* root){
 
 Node* Tree::findNode(Node* node, int key){
     while (node != nullptr && key != node->key){
-        if(node->key < key){
+        if(key < node->key){
             node = node->left;
         }
         else{
@@ -87,12 +94,12 @@ Node* Tree::successor(Node* node){
     if(node->right != nullptr){
         return treeMin(node->right);
     }
-    Node* y = node->parent;
-    while(y != nullptr && node==y->right){
-        node = y;
-        y = y->parent;
+    Node* curr = node->parent;
+    while(curr != nullptr && node == curr->right){
+        node = curr;
+        curr = curr->parent;
     }
-    return y;
+    return curr;
 }
 
 int Tree::getTreeHeight(Node* node){
@@ -108,48 +115,48 @@ int Tree::getTreeHeight(Node* node){
 
 void Tree::treeInsert(int key){
     Node* newValue = new Node(key);
-    Node* y = nullptr;
-    Node* x = root;
-    while (x != nullptr){
-        y = x;
-        if(newValue->key < x->key){
-            x = x->left;
+    Node* newValueParent = nullptr;
+    Node* curr = root;
+    while (curr != nullptr){
+        newValueParent = curr;
+        if(newValue->key < curr->key){
+            curr = curr->left;
         }
         else{
-            x = x->right;
+            curr = curr->right;
         }
     }
-    newValue->parent = y;
-    if(y == nullptr){
+    newValue->parent = newValueParent;
+    if(newValueParent == nullptr){
         root = newValue;
     }
-    else if(newValue->key < y->key){
-        y->left = newValue;
+    else if(newValue->key < newValueParent->key){
+        newValueParent->left = newValue;
     }
     else{
-        y->right = newValue;
+        newValueParent->right = newValue;
     }
 }
 
-void Tree::treeDelete(Node* newValue){ 
-    if(newValue->left == nullptr){
-        transplant(newValue, newValue->right);
+void Tree::treeDelete(Node* targetNode){ 
+    if(targetNode->left == nullptr){
+        transplant(targetNode, targetNode->right);
     }
-    else if(newValue->right == nullptr){
-        transplant(newValue, newValue->left);
+    else if(targetNode->right == nullptr){
+        transplant(targetNode, targetNode->left);
     }
     else{
-        Node* y = treeMin(newValue->right);
-        if(y->parent != newValue){
-            transplant(y, y->right);
-            y->right = newValue->right;
-            y->right->parent = y;
+        Node* replacementNode = treeMin(targetNode->right);
+        if(replacementNode->parent != targetNode){
+            transplant(replacementNode, replacementNode->right);
+            replacementNode->right = targetNode->right;
+            replacementNode->right->parent = replacementNode;
         }
-        transplant(newValue, y);
-        y->left = newValue->left;
-        y->left->parent = y;
+        transplant(targetNode, replacementNode);
+        replacementNode->left = targetNode->left;
+        replacementNode->left->parent = replacementNode;
     }
-    delete newValue;
+    delete targetNode;
 }
 
 void Tree::preorderTraversal(Node* node){
@@ -176,18 +183,18 @@ void Tree::postorderTraversal(Node* node){
     }
 }
 
-void Tree::transplant(Node* u, Node* v){  
-    if(u->parent == nullptr){
-        root = v;
+void Tree::transplant(Node* nodeToReplace, Node* replacementNode){  
+    if(nodeToReplace->parent == nullptr){
+        root = replacementNode;
     }
-    else if(u == u->parent->left){
-        u->parent->left = v;
+    else if(nodeToReplace == nodeToReplace->parent->left){
+        nodeToReplace->parent->left = replacementNode;
     }
     else{
-        u->parent->right = v;
+        nodeToReplace->parent->right = replacementNode;
     }
-    if(v != nullptr){
-        v->parent = u->parent;
+    if(replacementNode != nullptr){
+        replacementNode->parent = nodeToReplace->parent;
     }
 }
 
@@ -202,14 +209,6 @@ std::vector<int> generateRandomVector(int vectorSize){
     std::vector<int> vec(mySet.begin(), mySet.end());
     std::random_shuffle(vec.begin(), vec.end());
     return vec;
-}
-
-Tree* createTree(std::vector<int> &vec){
-    Tree* newTree = new Tree();
-    for(int nodeNum = 0; nodeNum < vec.size(); nodeNum++){
-        newTree->treeInsert(vec[nodeNum]);
-    }
-    return newTree;
 }
 
 void printCSV(std::vector<float> times, std::string fileName){
@@ -246,7 +245,7 @@ void partOneExperiment(){
     
             std::vector<int> keyVector = generateRandomVector(nValue);
             auto startCreate = std::chrono::high_resolution_clock::now();
-            Tree* experimentTree = createTree(keyVector);
+            Tree* experimentTree = new Tree(keyVector);
             auto endCreate = std::chrono::high_resolution_clock::now();
             averageCreateTime += std::chrono::duration_cast<std::chrono::nanoseconds>
                             (endCreate - startCreate).count();
