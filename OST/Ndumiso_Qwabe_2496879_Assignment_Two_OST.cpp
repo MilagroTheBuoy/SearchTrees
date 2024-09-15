@@ -317,7 +317,7 @@ void OSTree::transplant(Node* nodeToReplace, Node* replacementNode){
     }
 }
 
-/*==================================END OF OSTREE CODE===============================*/
+/*=================================END OF OSTREE CODE===============================*/
 
 int main(){
     std::vector<int> vec = {27, 30, 25, 28, 50, 40, 60, 42, 65};

@@ -218,9 +218,8 @@ void Tree::transplant(Node* nodeToReplace, Node* replacementNode){
     }
 }
 
+/*==================================END OF TREE CODE================================*/
 
-/*=========================================================================================*/
-//END OF TREE CODE
 std::vector<int> generateRandomVector(int vectorSize){
     std::set<int> mySet;
 
