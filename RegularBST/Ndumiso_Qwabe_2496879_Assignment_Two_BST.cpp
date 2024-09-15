@@ -287,8 +287,6 @@ void partOneExperiment(){
         averageHeightsVec.push_back(averageTreeHeight/NUM_EXPERIMENTS);
         averageCreateVec.push_back(averageCreateTime/NUM_EXPERIMENTS);
         averageDestroyVec.push_back(averageDestroyTime/NUM_EXPERIMENTS);
-        
-        std::cout << nValue << "\n";
     }
 
     printCSV(averageHeightsVec, "AverageTreeHeights.csv");
