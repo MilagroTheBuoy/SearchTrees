@@ -44,7 +44,7 @@ class OSTree{
 
     private:
         void transplant(Node* nodeToReplace, Node* replacementNode);
-        void traverseDecrement(Node* initialNode, Node* targetNode);
+        void traverseDecrement(Node* targetNode);
 };
 
 Node::Node(int newKey){
@@ -174,7 +174,10 @@ void OSTree::treeInsert(int key){
 
     while (curr != nullptr){
         newValueParent = curr;
+
+        //since newValue is going to be in curr's subtree, increase curr's size
         curr->size++;
+
         if(newValue->key < curr->key){
             curr = curr->left;
         }
@@ -196,12 +199,19 @@ void OSTree::treeInsert(int key){
     }
 }
 
-void OSTree::traverseDecrement(Node* initialNode, Node* targetNode){
+/*The traverseDecrement function decrements the size of all of the ancestors of the
+node that is going to be transplanted*/
+void OSTree::traverseDecrement(Node* targetNode){
     Node* curr = root;
 
-    while (curr != nullptr && curr != targetNode){
+    if(targetNode == nullptr){
+        int f = 0;
+    }
+
+    while (curr != nullptr && targetNode != nullptr && curr != targetNode){
         curr->size--;
-        if(initialNode->key < curr->key){
+
+        if(targetNode->key < curr->key){
             curr = curr->left;
         }
         else{
@@ -211,6 +221,7 @@ void OSTree::traverseDecrement(Node* initialNode, Node* targetNode){
 }
 
 void OSTree::treeDelete(Node* targetNode){
+
     if(targetNode == nullptr){
         return;
     }
@@ -218,23 +229,18 @@ void OSTree::treeDelete(Node* targetNode){
     Node* transplantNode;
     if(targetNode->left == nullptr){
         transplantNode = targetNode->right;
-        traverseDecrement(root, transplantNode);
+        traverseDecrement(targetNode->right);
         transplant(targetNode, targetNode->right);
     }
     else if(targetNode->right == nullptr){
         transplantNode = targetNode->left;
-        traverseDecrement(root, transplantNode);
+        traverseDecrement(targetNode->left);
         transplant(targetNode, targetNode->left);
     }
     else{
         Node* replacementNode = treeMin(targetNode->right);
         transplantNode = replacementNode;
-        
-        /*checks if right successor exists and is not the node with the smallest key
-        in subtree*/
-        if(targetNode->right != nullptr && targetNode->right->left != nullptr){
-            targetNode->right->size--;
-        }
+        traverseDecrement(replacementNode);
 
         if(replacementNode->parent != targetNode){
             transplant(replacementNode, replacementNode->right);
@@ -245,21 +251,21 @@ void OSTree::treeDelete(Node* targetNode){
         transplant(targetNode, replacementNode);
         replacementNode->left = targetNode->left;
         replacementNode->left->parent = replacementNode;
-
-        //updates size of the node that replaced the deleted note
-        if(transplantNode != nullptr){
-            transplantNode->size = targetNode->size - 1;
-        }
-
-        //decrements size of parents up till the root
-        while(replacementNode != nullptr && replacementNode->parent != nullptr){
-            replacementNode->parent->size--;
-            replacementNode = replacementNode->parent;
-        }
     }
 
-    /**/
+    //update transplantNode's size to be the sum of the size of its children + 1
+    if(transplantNode != nullptr){
+        transplantNode->size = 1;
 
+        if(transplantNode->left != nullptr){
+            transplantNode->size += transplantNode->left->size;
+        }
+
+        if(transplantNode->right != nullptr){
+            transplantNode->size += transplantNode->right->size;
+        }
+    }
+    
     delete targetNode;
 }
 
@@ -296,10 +302,6 @@ void OSTree::postorderTraversal(Node* node){
 }
 
 void OSTree::transplant(Node* nodeToReplace, Node* replacementNode){
-    //
-    /*if(replacementNode!=nullptr && nodeToReplace != nullptr){
-        replacementNode->size = nodeToReplace->size - 1;
-    }*/
     if(nodeToReplace->parent == nullptr){
         root = replacementNode;
     }
@@ -315,17 +317,13 @@ void OSTree::transplant(Node* nodeToReplace, Node* replacementNode){
     }
 }
 
-/*=========================================================================================*/
-//END OF OSTREE CODE
+/*==================================END OF OSTREE CODE===============================*/
 
 int main(){
-    //partOneExperiment();
-    //std::vector<int> vec = generateRandomVector(10);
-    std::vector<int> vec = {30, 25, 50, 40, 60, 55, 42};
+    std::vector<int> vec = {27, 30, 25, 28, 50, 40, 60, 42, 65};
     OSTree* tree = new OSTree(vec);
     tree->inorderTraversal(tree->root, true);
     tree->treeDelete(tree->findNode(tree->root, 40));
-    tree->treeDelete(tree->findNode(tree->root, 42));
     delete tree;
     return 0;
 };
