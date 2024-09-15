@@ -6,43 +6,45 @@
 #include <vector>
 #include <algorithm>
 
-const int NUM_EXPERIMENTS = 10;
-
 class Node{
     public:
         Node(int newKey);
         ~Node();
 
-        int key;
+        int key, size = 1;
 
         Node* left = nullptr;
         Node* right = nullptr;
         Node* parent = nullptr;
 };
 
-class Tree{
+class OSTree{
     public:
-        Tree();
-        Tree(Node* newRoot);
-        Tree(std::vector<int> &vec);
-        ~Tree();
+        OSTree();
+        OSTree(Node* newRoot);
+        OSTree(std::vector<int> &vec);
+        ~OSTree();
 
         Node* root = nullptr;
         Node* treeMin(Node* root);
         Node* treeMax(Node* root);
         Node* findNode(Node* node, int key);
+        Node* orderFindNode(Node* node, int key);
         Node* successor(Node* node);
 
+        int rank(Node* node);
         int getTreeHeight(Node* node);
 
         void treeInsert(int key);
         void treeDelete(Node* targetNode);
         void preorderTraversal(Node* node);
-        void inorderTraversal(Node* node);
+        void inorderTraversal(Node* node, bool printMode);
         void postorderTraversal(Node* node);
+        
 
     private:
         void transplant(Node* nodeToReplace, Node* replacementNode);
+        void traverseDecrement(Node* initialNode, Node* targetNode);
 };
 
 Node::Node(int newKey){
@@ -51,25 +53,25 @@ Node::Node(int newKey){
 
 Node::~Node(){}
 
-Tree::Tree(){}
+OSTree::OSTree(){}
 
-Tree::Tree(Node* newRoot){
+OSTree::OSTree(Node* newRoot){
     root = newRoot;
 }
 
-Tree::Tree(std::vector<int> &vec){
+OSTree::OSTree(std::vector<int> &vec){
     for(int number: vec){
         treeInsert(number);
     }
 }
 
-Tree::~Tree(){
+OSTree::~OSTree(){
     while (root != nullptr){
         treeDelete(root);
     }
 }
 
-Node* Tree::treeMin(Node* root){ 
+Node* OSTree::treeMin(Node* root){ 
     while(root->left != nullptr){
         root = root->left;
     }
@@ -77,7 +79,7 @@ Node* Tree::treeMin(Node* root){
     return root;
 }
 
-Node* Tree::treeMax(Node* root){ 
+Node* OSTree::treeMax(Node* root){ 
     while(root->right != nullptr){
         root = root->right;
     }
@@ -85,7 +87,7 @@ Node* Tree::treeMax(Node* root){
     return root;
 }
 
-Node* Tree::findNode(Node* node, int key){
+Node* OSTree::findNode(Node* node, int key){
     while (node != nullptr && key != node->key){
         if(key < node->key){
             node = node->left;
@@ -98,14 +100,32 @@ Node* Tree::findNode(Node* node, int key){
     return node;
 }
 
-Node* Tree::successor(Node* node){
+Node* OSTree::orderFindNode(Node* node, int rank){
+    int rankOfRoot = 0;
+
+    if(node->left != nullptr){
+        rankOfRoot = node->left->size;
+    }
+    rankOfRoot++;
+
+    if(rank == rankOfRoot){
+        return node;
+    }
+    else if(rank < rankOfRoot){
+        return orderFindNode(node->left, rank);
+    }
+
+    return orderFindNode(node->right, rank - rankOfRoot);
+}
+
+Node* OSTree::successor(Node* node){
     if(node->right != nullptr){
         return treeMin(node->right);
     }
 
     Node* curr = node->parent;
 
-    while(curr != nullptr && node == curr->right){
+    while(curr != nullptr && node==curr->right){
         node = curr;
         curr = curr->parent;
     }
@@ -113,7 +133,30 @@ Node* Tree::successor(Node* node){
     return curr;
 }
 
-int Tree::getTreeHeight(Node* node){
+int OSTree::rank(Node* node){
+    int rank = 0;
+
+    if(node->left != nullptr){
+        rank = node->left->size;
+    }
+    rank++;
+
+    Node* y = node;
+
+    while (y != root){
+        if(y == y->parent->right){
+            if(y->parent->left != nullptr){
+                rank = rank + y->parent->left->size;
+            }
+            rank++;
+        }
+        y = y->parent;
+    }
+
+    return rank;
+}
+
+int OSTree::getTreeHeight(Node* node){
     if(node == nullptr){
         return -1;
     }
@@ -124,14 +167,14 @@ int Tree::getTreeHeight(Node* node){
     return std::max(leftHeight, rightHeight) + 1;
 }
 
-void Tree::treeInsert(int key){
+void OSTree::treeInsert(int key){
     Node* newValue = new Node(key);
     Node* newValueParent = nullptr;
     Node* curr = root;
 
     while (curr != nullptr){
         newValueParent = curr;
-
+        curr->size++;
         if(newValue->key < curr->key){
             curr = curr->left;
         }
@@ -139,8 +182,9 @@ void Tree::treeInsert(int key){
             curr = curr->right;
         }
     }
-    newValue->parent = newValueParent;
 
+    newValue->parent = newValueParent;
+    
     if(newValueParent == nullptr){
         root = newValue;
     }
@@ -152,33 +196,74 @@ void Tree::treeInsert(int key){
     }
 }
 
-void Tree::treeDelete(Node* targetNode){ 
+void OSTree::traverseDecrement(Node* initialNode, Node* targetNode){
+    Node* curr = root;
+
+    while (curr != nullptr && curr != targetNode){
+        curr->size--;
+        if(initialNode->key < curr->key){
+            curr = curr->left;
+        }
+        else{
+            curr = curr->right;
+        }
+    }
+}
+
+void OSTree::treeDelete(Node* targetNode){
     if(targetNode == nullptr){
         return;
     }
-
+    
+    Node* transplantNode;
     if(targetNode->left == nullptr){
+        transplantNode = targetNode->right;
+        traverseDecrement(root, transplantNode);
         transplant(targetNode, targetNode->right);
     }
     else if(targetNode->right == nullptr){
+        transplantNode = targetNode->left;
+        traverseDecrement(root, transplantNode);
         transplant(targetNode, targetNode->left);
     }
     else{
         Node* replacementNode = treeMin(targetNode->right);
+        transplantNode = replacementNode;
+        
+        /*checks if right successor exists and is not the node with the smallest key
+        in subtree*/
+        if(targetNode->right != nullptr && targetNode->right->left != nullptr){
+            targetNode->right->size--;
+        }
+
         if(replacementNode->parent != targetNode){
             transplant(replacementNode, replacementNode->right);
             replacementNode->right = targetNode->right;
             replacementNode->right->parent = replacementNode;
         }
+
         transplant(targetNode, replacementNode);
         replacementNode->left = targetNode->left;
         replacementNode->left->parent = replacementNode;
+
+        //updates size of the node that replaced the deleted note
+        if(transplantNode != nullptr){
+            transplantNode->size = targetNode->size - 1;
+        }
+
+        //decrements size of parents up till the root
+        while(replacementNode != nullptr && replacementNode->parent != nullptr){
+            replacementNode->parent->size--;
+            replacementNode = replacementNode->parent;
+        }
     }
+
+    /**/
 
     delete targetNode;
 }
 
-void Tree::preorderTraversal(Node* node){
+void OSTree::preorderTraversal(Node* node){
     if(node != nullptr){
         std::cout << node->key << " ";
         preorderTraversal(node->left);
@@ -186,15 +271,23 @@ void Tree::preorderTraversal(Node* node){
     }
 }
 
-void Tree::inorderTraversal(Node* node){
+void OSTree::inorderTraversal(Node* node, bool printMode){
     if(node != nullptr){
-        inorderTraversal(node->left);
-        std::cout << node->key << " ";
-        inorderTraversal(node->right);
+
+        inorderTraversal(node->left, printMode);
+
+        if(printMode){
+            std::cout << node->key << ":" << rank(node) << " ";
+        }
+        else{
+            node->key -= 1;
+        }
+
+        inorderTraversal(node->right, printMode);
     }
 }
 
-void Tree::postorderTraversal(Node* node){
+void OSTree::postorderTraversal(Node* node){
     if(node != nullptr){
         postorderTraversal(node->left);
         postorderTraversal(node->right);
@@ -202,7 +295,11 @@ void Tree::postorderTraversal(Node* node){
     }
 }
 
-void Tree::transplant(Node* nodeToReplace, Node* replacementNode){  
+void OSTree::transplant(Node* nodeToReplace, Node* replacementNode){
+    //
+    /*if(replacementNode!=nullptr && nodeToReplace != nullptr){
+        replacementNode->size = nodeToReplace->size - 1;
+    }*/
     if(nodeToReplace->parent == nullptr){
         root = replacementNode;
     }
@@ -218,86 +315,17 @@ void Tree::transplant(Node* nodeToReplace, Node* replacementNode){
     }
 }
 
-
 /*=========================================================================================*/
-//END OF TREE CODE
-std::vector<int> generateRandomVector(int vectorSize){
-    std::set<int> mySet;
-
-    while(mySet.size() != vectorSize){
-        mySet.insert(rand() % 10000);
-    }
-
-    std::vector<int> vec(mySet.begin(), mySet.end());
-    std::random_shuffle(vec.begin(), vec.end());
-
-    return vec;
-}
-
-void printCSV(std::vector<float> times, std::string fileName){
-    std::vector<std::string> labels = {"300", "600", "900", "1200", "1500", "1800", "2100", 
-                                        "2400", "2700", "3000", "3300", "3600", "3900", "4200", 
-                                        "4500", "4800", "5100", "5400", "5700", "6000"};
-    std::ofstream csv;
-
-    csv.open(fileName);
-    csv << "input,time\n";
-    csv <<"0,0\n";
-
-    for (size_t i = 0; i < labels.size(); i++){
-        csv << labels[i] << "," << times[i] << "\n";
-    }
-
-    csv.close();
-}
-
-void partOneExperiment(){
-    int treeHeight, averageTreeHeight;
-    float averageCreateTime, averageDestroyTime;
-    std::vector<int> nValues = {300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700, 3000, 
-                                3300, 3600, 3900, 4200, 4500, 4800, 5100, 5400, 5700, 6000};
-    
-    std::vector<float> averageHeightsVec;
-    std::vector<float> averageCreateVec;
-    std::vector<float> averageDestroyVec;
-
-    for(auto nValue: nValues){
-        
-        averageTreeHeight = 0;
-        averageCreateTime = 0.0;
-        averageDestroyTime = 0.0;
-        for(int numTrials = 0; numTrials < NUM_EXPERIMENTS; numTrials++){
-    
-            std::vector<int> keyVector = generateRandomVector(nValue);
-            auto startCreate = std::chrono::high_resolution_clock::now();
-            Tree* experimentTree = new Tree(keyVector);
-            auto endCreate = std::chrono::high_resolution_clock::now();
-            averageCreateTime += std::chrono::duration_cast<std::chrono::nanoseconds>
-                            (endCreate - startCreate).count();
-
-            treeHeight = experimentTree->getTreeHeight(experimentTree->root);
-            averageTreeHeight += treeHeight;
-
-            auto startDestroy = std::chrono::high_resolution_clock::now();
-            delete experimentTree;
-            auto endDestroy = std::chrono::high_resolution_clock::now();
-            averageDestroyTime += std::chrono::duration_cast<std::chrono::nanoseconds>
-                            (endDestroy - startDestroy).count();
-        }
-
-        averageHeightsVec.push_back(averageTreeHeight/NUM_EXPERIMENTS);
-        averageCreateVec.push_back(averageCreateTime/NUM_EXPERIMENTS);
-        averageDestroyVec.push_back(averageDestroyTime/NUM_EXPERIMENTS);
-        
-        std::cout << nValue << "\n";
-    }
-
-    printCSV(averageHeightsVec, "AverageTreeHeights.csv");
-    printCSV(averageCreateVec, "AverageTreeCreateTime.csv");
-    printCSV(averageDestroyVec, "AverageTreeDestroyTime.csv");
-}
+//END OF OSTREE CODE
 
 int main(){
-    partOneExperiment();    
+    //partOneExperiment();
+    //std::vector<int> vec = generateRandomVector(10);
+    std::vector<int> vec = {30, 25, 50, 40, 60, 55, 42};
+    OSTree* tree = new OSTree(vec);
+    tree->inorderTraversal(tree->root, true);
+    tree->treeDelete(tree->findNode(tree->root, 40));
+    tree->treeDelete(tree->findNode(tree->root, 42));
+    delete tree;
     return 0;
 };
