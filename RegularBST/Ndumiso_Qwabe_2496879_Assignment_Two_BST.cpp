@@ -224,7 +224,11 @@ std::vector<int> generateRandomVector(int vectorSize){
     std::set<int> mySet;
 
     while(mySet.size() != vectorSize){
-        mySet.insert(rand() % 10000);
+        int randInt = rand() % 100000;
+        if(mySet.find(randInt) == mySet.end()){
+            mySet.insert(randInt);
+        }
+        
     }
 
     std::vector<int> vec(mySet.begin(), mySet.end());
@@ -234,9 +238,11 @@ std::vector<int> generateRandomVector(int vectorSize){
 }
 
 void printCSV(std::vector<float> times, std::string fileName){
-    std::vector<std::string> labels = {"300", "600", "900", "1200", "1500", "1800", "2100", 
-                                        "2400", "2700", "3000", "3300", "3600", "3900", "4200", 
-                                        "4500", "4800", "5100", "5400", "5700", "6000"};
+    std::vector<std::string> labels = {"3000", "6000", "9000", "12000", "15000", "18000", "21000", 
+                                        "24000", "27000", "30000", "33000", "36000", "39000", "42000", 
+                                        "45000", "48000", "51000", "54000", "57000", "60000",
+                                        "63000", "66000", "69000", "72000", "75000", "78000", "81000", 
+                                        "84000", "87000", "90000"};
     std::ofstream csv;
 
     csv.open(fileName);
@@ -253,8 +259,10 @@ void printCSV(std::vector<float> times, std::string fileName){
 void partOneExperiment(){
     int treeHeight, averageTreeHeight;
     float averageCreateTime, averageDestroyTime;
-    std::vector<int> nValues = {300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700, 3000, 
-                                3300, 3600, 3900, 4200, 4500, 4800, 5100, 5400, 5700, 6000};
+    std::vector<int> nValues = {3000, 6000, 9000, 12000, 15000, 18000, 21000, 24000, 27000, 30000, 
+                                33000, 36000, 39000, 42000, 45000, 48000, 51000, 54000, 57000, 60000,
+                                63000, 66000, 69000, 72000, 75000, 78000, 81000, 84000, 87000, 90000};
+    
     
     std::vector<float> averageHeightsVec;
     std::vector<float> averageCreateVec;
@@ -287,6 +295,8 @@ void partOneExperiment(){
         averageHeightsVec.push_back(averageTreeHeight/NUM_EXPERIMENTS);
         averageCreateVec.push_back(averageCreateTime/NUM_EXPERIMENTS);
         averageDestroyVec.push_back(averageDestroyTime/NUM_EXPERIMENTS);
+
+        std::cout <<nValue << '\n';
     }
 
     printCSV(averageHeightsVec, "AverageTreeHeights.csv");
